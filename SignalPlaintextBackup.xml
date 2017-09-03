@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!-- File Created By Signal -->
+<smses count="2">
+ <sms protocol="0" address="555555" contact_name="null" date="1461621630014" readable_date="Tue, 25 Apr 2016 13:00:30 EDT" type="1" subject="null" body="Account notification: somebody said account info stuff" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
+ <sms protocol="0" address="+13155555555" contact_name="John Doe" date="1461604602014" readable_date="2016-04-25 13:16:42 EDT" type="1" subject="null" body="Someone said something" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
+</smses>
