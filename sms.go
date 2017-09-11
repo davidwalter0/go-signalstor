@@ -1,19 +1,14 @@
 package xml2json
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/davidwalter0/go-mutex"
 	"github.com/davidwalter0/go-persist"
 	"github.com/davidwalter0/go-persist/schema"
 	"github.com/davidwalter0/go-persist/uuid"
 )
-
-// SmsDb db connection and i/o interface object
-type SmsDb *persist.Database
 
 var smsDB = &persist.Database{}
 var standAlone = true
@@ -22,9 +17,33 @@ var smsDbInitialized = false
 var monitor = mutex.NewMonitor()
 
 // ConfigureDb alias for smsDbInitialize
-func ConfigureDb() SmsDb {
+func ConfigureDb() *persist.Database {
 	smsDbInitialize()
 	return smsDB
+}
+
+// ConfigureDb alias for smsDbInitialize
+func (sms *SmsDbIO) ConfigureDb() *SmsDbIO {
+	smsDbInitialize()
+	return sms
+}
+
+func (sms *SmsDbIO) smsDbInitialize() {
+	smsDB := sms.db
+	if !smsDbInitialized {
+		defer monitor()()
+		if !smsDbInitialized {
+			smsDbInitialized = true
+			if standAlone {
+				smsDB.ConfigEnvWPrefix("SQL", false)
+				smsDB.Connect()
+				if dropAll {
+					smsDB.DropAll(SmsDbIOSchema)
+				}
+				smsDB.Initialize(SmsDbIOSchema)
+			}
+		}
+	}
 }
 
 // Initialize a database connection
@@ -52,22 +71,25 @@ func smsDbInitialize() {
 // SmsDbIOSchema describes the table and triggers for persisting
 // smsentications from totp objects from twofactor
 // var SmsDbIOSchema schema.DBSchema = schema.DBSchema{
+// timestamp is an sms millisecond time
+// readable_date is mapped to date in the object,
 var SmsDbIOSchema = schema.DBSchema{
-	"sms": schema.SchemaText{ // date <-> domain
+	"sms": schema.SchemaText{ // timestamp <-> domain
 		`CREATE TABLE sms (
        id  serial primary key,
        guid varchar(256) NOT NULL DEFAULT '' unique,
        address varchar(256) NOT NULL, 
-       date varchar(32) NOT NULL, 
+       timestamp varchar(64) NOT NULL,  
        contact_name varchar(256) NOT NULL,
        readable_date varchar(256) NOT NULL, 
-       subject varchar(32) DEFAULT '', 
+       subject varchar(64) DEFAULT '', 
        body text,
        type int NOT NULL default 1,
+       encrypted boolean NOT NULL default false,
        created timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
        changed timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`,
-		`CREATE UNIQUE INDEX unique_idx on sms (address, date)`,
+		`CREATE UNIQUE INDEX unique_idx on sms (address, timestamp)`,
 		`CREATE OR REPLACE FUNCTION update_created_column()
        RETURNS TRIGGER AS $$
        BEGIN
@@ -81,30 +103,14 @@ var SmsDbIOSchema = schema.DBSchema{
 	},
 }
 
-// SmsDbIOKey accessible object for database smsentication table I/O
-// type SmsDbIOKey struct {
-// 	Address string `json:"address"`
-// 	Date    string `json:"date"`
-// }
-
-// SmsDbIO object db I/O for sms table
-type SmsDbIO struct {
-	ID      int               `json:"id"`
-	GUID    string            `json:"guid"`
-	Created time.Time         `json:"created"`
-	Changed time.Time         `json:"changed"`
-	db      *persist.Database `ignore:"true"`
-	Msg     SmsMessage
-}
-
 // NewKey create the key fields for an sms struct, notice that address
 // uses account
-func NewKey(address, date string) *SmsDbIO {
+func NewKey(address, timestamp string) *SmsDbIO {
 	smsDbInitialize()
 	return &SmsDbIO{
 		Msg: SmsMessage{
-			Address: address,
-			Date:    date,
+			Address:   address,
+			Timestamp: timestamp,
 		},
 		db: smsDB,
 	}
@@ -127,45 +133,38 @@ func NewSmsDbIOFromMsg(from *SmsMessage) *SmsDbIO {
 	}
 }
 
-// // NewSmsDbIO smsDbInitialize an sms struct
-// func NewSmsDbIO(address, date, subject, key, body, contactName, readableDate string) *SmsDbIO {
-// 	return &SmsDbIO{
-// 		Msg: SmsMessage{
-// 			Address:      address,
-// 			Date:         date,
-// 			Subject:      subject,
-// 			ContactName:  contactName,
-// 			Body:         body,
-// 			ReadableDate: readableDate,
-// 		},
-// 		db: smsDB,
-// 	}
-// }
-
 // CopySmsMessage smsDbInitialize an SmsDbIO struct from a message
-func (sms *SmsDbIO) CopySmsMessage(from *SmsMessage) {
+func (sms *SmsDbIO) CopySmsMessage(from *SmsMessage) *SmsDbIO {
 	sms.Msg = *from
+	return sms
 }
 
 // CopySmsDbIO smsDbInitialize an sms struct
-func (sms *SmsDbIO) CopySmsDbIO(from *SmsDbIO) {
+func (sms *SmsDbIO) CopySmsDbIO(from *SmsDbIO) *SmsDbIO {
 	sms.ID = from.ID
 	sms.GUID = from.GUID
 	sms.Msg = from.Msg
 	sms.Created = from.Created
 	sms.Changed = from.Changed
+	return sms
 }
 
-// CopyKey smsDbInitialize the sms's table key in the struct
-func (sms *SmsDbIO) CopySmSDbIOKey(from *SmsDbIO) {
+// CopyKey from SmsDbIO object
+func (sms *SmsDbIO) CopyKey(from *SmsDbIO) *SmsDbIO {
+	return sms.CopySmSDbIOKey(from)
+}
+
+// CopySmSDbIOKey smsDbInitialize the sms's table key in the struct
+func (sms *SmsDbIO) CopySmSDbIOKey(from *SmsDbIO) *SmsDbIO {
 	sms.Msg.Address = from.Msg.Address
-	sms.Msg.Date = from.Msg.Date
+	sms.Msg.Timestamp = from.Msg.Timestamp
+	return sms
 }
 
 // Create a row in a table
-func (sms *SmsDbIO) Create() {
+func (sms *SmsDbIO) Create() (err error) {
 	if sms.db == nil {
-		panic("SmsDbIO.db unsmsDbInitialized")
+		panic("SmsDbIO.db not initialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -174,34 +173,31 @@ INSERT INTO sms
 (
   guid, 
   address,
-  date,
+  timestamp,
   subject,
   contact_name,
   body,
   readable_date,
+  type,
   created,
   changed
 )
-VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
 		uuid.GUID().String(),
 		sms.Msg.Address,
-		sms.Msg.Date,
+		sms.Msg.Timestamp,
 		sms.Msg.Subject,
 		sms.Msg.ContactName,
 		sms.Msg.Body,
-		sms.Msg.ReadableDate,
+		sms.Msg.Date,
+		sms.Msg.Type,
 	)
-	// fmt.Println(insert)
-	// fmt.Println(smsDB.Exec(insert))
-	_, err := smsDB.Exec(insert)
-	if err != nil {
-		log.Println("Row count query error", err)
-	}
-	// fmt.Println("Count", sms.Count())
+	_, err = smsDB.Exec(insert)
+	return
 }
 
 // Read row from db using sms key fields for query
-func (sms *SmsDbIO) Read() bool {
+func (sms *SmsDbIO) Read() (err error) {
 	if sms.db == nil {
 		panic("SmsDbIO.db unsmsDbInitialized")
 	}
@@ -212,11 +208,12 @@ SELECT
   id,
   guid, 
   address,
-  date,
+  timestamp,
   subject,
   contact_name,
   readable_date,
   body,
+  type,
   created,
   changed
 FROM
@@ -224,47 +221,38 @@ FROM
 WHERE
   address = '%s'
 AND
-  date = '%s'
+  timestamp = '%s'
 `,
 		sms.Msg.Address,
-		sms.Msg.Date,
+		sms.Msg.Timestamp,
 	)
-	fmt.Println(query)
+	// fmt.Println(query)
 	rows := smsDB.Query(query)
-	defer rows.Close()
-	for rows.Next() {
-		if err := rows.Scan(
-			&sms.ID,
-			&sms.GUID,
-			&sms.Msg.Address,
-			&sms.Msg.Date,
-			&sms.Msg.Subject,
-			&sms.Msg.ContactName,
-			&sms.Msg.ReadableDate,
-			&sms.Msg.Body,
-			&sms.Created,
-			&sms.Changed); err != nil {
-			panic(fmt.Sprintf("%v", err))
+	defer func() {
+		if err := rows.Close(); err != nil {
+			panic(err)
 		}
-		fmt.Println(
-			sms.ID,
-			sms.GUID,
-			sms.Msg.Address,
-			sms.Msg.Date,
-			sms.Msg.Subject,
-			sms.Msg.ContactName,
-			sms.Msg.ReadableDate,
-			sms.Msg.Body,
-			sms.Created,
-			sms.Changed)
-	}
-	count := sms.Count()
-	// fmt.Println("Count", count)
-	return count != 0
+	}()
+
+	rows.Next()
+	err = rows.Scan(
+		&sms.ID,
+		&sms.GUID,
+		&sms.Msg.Address,
+		&sms.Msg.Timestamp,
+		&sms.Msg.Subject,
+		&sms.Msg.ContactName,
+		&sms.Msg.Date,
+		&sms.Msg.Body,
+		&sms.Msg.Type,
+		&sms.Created,
+		&sms.Changed)
+
+	return
 }
 
 // Update row from db using sms key fields
-func (sms *SmsDbIO) Update() {
+func (sms *SmsDbIO) Update() (err error) {
 	if sms.db == nil {
 		panic("SmsDbIO.db unsmsDbInitialized")
 	}
@@ -278,59 +266,28 @@ SET
   contact_name  =  %d,
   readable_date = '%s',
   body          = '%s'
+  type          = '%s'
 WHERE
   address  = '%s'
 AND
-  date     = '%s'
+  timestamp     = '%s'
 `,
 		// set
 		sms.Msg.Subject,
 		sms.Msg.ContactName,
-		sms.Msg.ReadableDate,
+		sms.Msg.Date,
 		sms.Msg.Body,
+		sms.Msg.Type,
 		// where
 		sms.Msg.Address,
-		sms.Msg.Date,
+		sms.Msg.Timestamp,
 	)
-	var err error
-	var rows *sql.Rows
-	var result sql.Result
-	fmt.Println(update)
-	result, err = smsDB.Exec(update)
-	fmt.Println("update result", result, "error", err)
-	rows = smsDB.Query("SELECT * FROM sms")
-	defer rows.Close()
-	for rows.Next() {
-		if err := rows.Scan(
-			&sms.ID,
-			&sms.GUID,
-			&sms.Msg.Address,
-			&sms.Msg.Date,
-			&sms.Msg.Subject,
-			&sms.Msg.ContactName,
-			&sms.Msg.ReadableDate,
-			&sms.Msg.Body,
-			&sms.Created,
-			&sms.Changed); err != nil {
-			panic(fmt.Sprintf("%v", err))
-		}
-		fmt.Println(
-			sms.ID,
-			sms.GUID,
-			sms.Msg.Address,
-			sms.Msg.Date,
-			sms.Msg.Subject,
-			sms.Msg.ContactName,
-			sms.Msg.ReadableDate,
-			sms.Msg.Body,
-			sms.Created,
-			sms.Changed)
-	}
-	// fmt.Println("Count", sms.Count())
+	_, err = smsDB.Exec(update)
+	return
 }
 
 // Delete row from db using sms key fields
-func (sms *SmsDbIO) Delete() {
+func (sms *SmsDbIO) Delete() (err error) {
 	if sms.db == nil {
 		panic("SmsDbIO.db unsmsDbInitialized")
 	}
@@ -342,47 +299,14 @@ DELETE FROM
 WHERE
   address  = '%s'
 AND
-  date     = '%s'
+  timestamp     = '%s'
 `,
 		// where
 		sms.Msg.Address,
-		sms.Msg.Date,
+		sms.Msg.Timestamp,
 	)
-	var err error
-	var rows *sql.Rows
-	var result sql.Result
-	fmt.Println(delete)
-	result, err = smsDB.Exec(delete)
-	fmt.Println("delete result", result, "error", err)
-	rows = smsDB.Query("SELECT * FROM sms")
-	defer rows.Close()
-	for rows.Next() {
-		if err := rows.Scan(
-			&sms.ID,
-			&sms.GUID,
-			&sms.Msg.Address,
-			&sms.Msg.Date,
-			&sms.Msg.Subject,
-			&sms.Msg.ContactName,
-			&sms.Msg.ReadableDate,
-			&sms.Msg.Body,
-			&sms.Created,
-			&sms.Changed); err != nil {
-			panic(fmt.Sprintf("%v", err))
-		}
-		fmt.Println(
-			sms.ID,
-			sms.GUID,
-			sms.Msg.Address,
-			sms.Msg.Date,
-			sms.Msg.Subject,
-			sms.Msg.ContactName,
-			sms.Msg.ReadableDate,
-			sms.Msg.Body,
-			sms.Created,
-			sms.Changed)
-	}
-	// fmt.Println("Count", sms.Count())
+	_, err = smsDB.Exec(delete)
+	return
 }
 
 // Count rows for keys in sms
@@ -399,11 +323,11 @@ FROM
 WHERE 
   address  = '%s'
 AND
-  date     = '%s'
+  timestamp     = '%s'
 `,
 		// where
 		sms.Msg.Address,
-		sms.Msg.Date,
+		sms.Msg.Timestamp,
 	)
 
 	row := smsDB.QueryRow(query)

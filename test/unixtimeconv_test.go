@@ -95,90 +95,23 @@ func Test_UnixTimeFunctions(t *testing.T) {
 		}
 
 	}
-
-	/*
-		est, _ := time.LoadLocation("US/Eastern")
-		date := "Tue, 25 Apr 2016 18:00:30 EDT"
-		t, err := time.ParseInLocation(time.RFC1123, date, est)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println("ParseInLocation", t)
-		{
-			cst, _ := time.LoadLocation("US/Central")
-			date := "Tue, 25 Apr 2016 18:00:30 EDT"
-			t, err := time.ParseInLocation(time.RFC1123, date, cst)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println("ParseInLocation", t)
-		}
-
-		t, err = time.Parse(time.RFC1123, date)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println("parse          ", t)
-		fmt.Println("format         ", t.Format(time.RFC1123))
-
-		date = "Tue, 25 Apr 2016 18:00:30 CDT"
-		t, err = time.ParseInLocation(time.RFC1123, date, est)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		fmt.Println("ParseInLocation", t)
-
-		date = "Tue, 25 Apr 2016 18:00:30"
-		t, err = time.ParseInLocation(time.RFC1123, date, est)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		fmt.Println("ParseInLocation", t)
-
-		t, err = time.Parse(time.RFC1123, date)
-		if err != nil {
-			fmt.Println(err)
-		}
-		fmt.Println("parse          ", t)
-		fmt.Println("format         ", t.Format(time.RFC1123))
-		ut := "1461621630014"
-		{
-			t, m := ut[:10], ut[10:]
-			uti, _ := strconv.ParseInt(ut, 10, 64)
-			mv, _ := strconv.ParseInt(m, 10, 64)
-			tv, _ := strconv.ParseInt(t, 10, 64)
-			fmt.Println("unix ", t, tv, m, mv)
-			tm1 := UnixTime(uti)
-			tm2 := UnixTimeWithMilli(tv, mv)
-			fmt.Println("tm", tm1)
-			fmt.Printf("tm %v %T\n", tm1, tm1)
-			fmt.Println("tm", tm2)
-			fmt.Printf("tm %v %T\n", tm2, tm2)
-		}
-		fmt.Println(UnixTimeParseString(ut))
-		{
-			t, m := UnixTimeMsResolutionStr2Int(ut)
-			fmt.Printf(">>>  %10d   :%03d\n", t, m)
-			fmt.Printf("time %10d:ms:%03d\n", t, m)
-			fmt.Println(UnixTimeStringWithMsToPrintable(ut))
-		}
-	*/
 }
 
 func Test_SmsMessageString(t *testing.T) {
+	expected := `
+Address   : +15555555555
+Timestamp : 1461621630014
 
-	expected := `Contact : name
-Date    : Mon, 25 Apr 2016 18:00:30 EDT
-Address : +15555555555
-Message : More text
+Date      : Mon, 25 Apr 2016 18:00:30 EDT
+Contact   : name
+Message   : More text
 `
 	var message xml2json.SmsMessage = xml2json.SmsMessage{
-		ContactName:  "name",
-		ReadableDate: "Mon, 25 Apr 2016 18:00:30 EDT",
-		Address:      "+15555555555",
-		Body:         "More text",
+		ContactName: "name",
+		Timestamp:   "1461621630014",
+		Date:        "Mon, 25 Apr 2016 18:00:30 EDT",
+		Address:     "+15555555555",
+		Body:        "More text",
 	}
 
 	if expected != message.String() {

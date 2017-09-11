@@ -2,7 +2,31 @@ package xml2json
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/davidwalter0/go-persist"
 )
+
+// SmsDbIO object db I/O for sms table
+type SmsDbIO struct {
+	ID      int               `json:"id"`
+	GUID    string            `json:"guid"`
+	Created time.Time         `json:"created"`
+	Changed time.Time         `json:"changed"`
+	db      *persist.Database `ignore:"true"`
+	Msg     SmsMessage
+}
+
+// SmsMessage sms message content
+type SmsMessage struct {
+	Address     string `json:"address"`
+	Timestamp   string `json:"date"` // millisecond resolution sms timestamp
+	ContactName string `json:"contact_name"`
+	Date        string `json:"readable_date"`
+	Subject     string `json:"subject"`
+	Body        string `json:"body"`
+	Type        string `json:"type" doc:"1 received, 2 sent"`
+}
 
 // Ftp options to load from flags or env variables
 type Ftp struct {
@@ -18,35 +42,9 @@ type Ftp struct {
 var timeout uint = 5 // seconds
 var writingToFile = false
 
-// type SMSItem struct {
-// 	FmtDate       string `json:"readable_date"`
-// 	ScToa         string `json:"sc_toa"`
-// 	Read          string `json:"read"`
-// 	Status        string `json:"status"`
-// 	Protocol      string `json:"protocol"`
-// 	ContactName   string `json:"contact_name"`
-// 	Type          string `json:"type"`
-// 	Subject       string `json:"subject"`
-// 	Toa           string `json:"toa"`
-// 	Date          string `json:"date"`
-// 	Address       string `json:"address"`
-// 	Body          string `json:"body"`
-// 	ServiceCenter string `json:"service_center"`
-// 	Locked        string `json:"locked"`
-// }
-
-// SmsMessage sms message content
-type SmsMessage struct {
-	ContactName  string `json:"contact_name"`
-	Date         string `json:"date"`
-	ReadableDate string `json:"readable_date"`
-	Address      string `json:"address"`
-	Subject      string `json:"subject"`
-	Body         string `json:"body"`
-	Type         string `json:"type" doc:"1 received, 2 sent"`
-}
-
-// type SMS map[string]SMSItem
+// SmsMessageUnmarshal messages from xml parse are in a
+// map[string]map[string]string. map["sms"] is the only entry in the
+// parent map
 type SmsMessageUnmarshal struct {
 	SmsMessage `json:"sms"`
 }
@@ -58,16 +56,14 @@ type SmsMessages struct {
 }
 
 type ByDateSmsMessageMap map[int]*SmsMessage
-type UserDateMap map[string]ByDateSmsMessageMap
+type UserTimestampMap map[string]ByDateSmsMessageMap
 
-// var userDateMap UserDateMap = make(UserDateMap)
+// BySMSTimestamp sortable type
+type BySMSTimestamp SmsMessageArray
 
-// BySMSDate sortable type
-type BySMSDate SmsMessageArray
-
-func (a BySMSDate) Len() int           { return len(a) }
-func (a BySMSDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a BySMSDate) Less(i, j int) bool { return a[i].Date < a[j].Date }
+func (a BySMSTimestamp) Len() int           { return len(a) }
+func (a BySMSTimestamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a BySMSTimestamp) Less(i, j int) bool { return a[i].Timestamp < a[j].Timestamp }
 
 // BySMSAddress sortable type
 type BySMSAddress SmsMessageArray
@@ -76,36 +72,22 @@ func (a BySMSAddress) Len() int           { return len(a) }
 func (a BySMSAddress) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a BySMSAddress) Less(i, j int) bool { return a[i].Address < a[j].Address }
 
-// func (message *SmsMessageUnmarshal) String() string {
-// 	contact := message.SmsMessage.ContactName
-// 	return fmt.Sprintf(
-// 		`Contact :%s
-// Date    :%s
-// Address :%s
-// Message :%s
-// `,
-// 		// message.From,
-// 		contact,
-// 		message.SmsMessage.ReadableDate,
-// 		message.SmsMessage.Address,
-// 		// message.Subject,
-// 		message.SmsMessage.Body,
-// 	)
-// }
-
 func (message SmsMessage) String() string {
 	contact := message.ContactName
 	return fmt.Sprintf(
-		`Contact : %s
-Date    : %s
-Address : %s
-Message : %s
+		`
+Address   : %s
+Timestamp : %s
+
+Date      : %s
+Contact   : %s
+Message   : %s
 `,
-		// message.From,
-		contact,
-		message.ReadableDate,
 		message.Address,
-		// message.Subject,
+		message.Timestamp,
+
+		message.Date,
+		contact,
 		message.Body,
 	)
 }

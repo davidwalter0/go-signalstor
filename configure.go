@@ -10,7 +10,7 @@ import (
 
 var ftpcfg = &Ftp{}
 
-// Configure load the configuration from environment, or cli flags
+// ConfigureFtp load the configuration from environment, or cli flags
 func ConfigureFtp() *Ftp {
 	if err := cfg.Parse(ftpcfg); err != nil {
 		log.Fatalf("configuration error %v", err)

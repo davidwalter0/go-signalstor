@@ -18,7 +18,6 @@ func main() {
 		fmt.Printf("error: Download failed %v\n", err)
 		os.Exit(-1)
 	}
-	// xml2json.XMLParseArray(rawData, &messages, xml2json.SmsXmlFixUp, xml2json.NoOp)
 	xml2json.XMLParse(rawData, &messages, xml2json.SmsXMLFixUp, xml2json.NoOp)
 	xml2json.DumpParsedMessages(os.Stderr, messages)
 }
