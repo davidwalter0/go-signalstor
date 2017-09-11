@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	ftp := xml2json.Configure()
+	ftp := xml2json.ConfigureFtp()
 	var err error
 	var rawData []byte
 	var messages xml2json.SmsMessages
@@ -20,7 +20,7 @@ func main() {
 		os.Exit(-1)
 	}
 	// xml2json.XMLParseArray(rawData, &messages, xml2json.SmsXmlFixUp, xml2json.NoOp)
-	xml2json.XMLParse(rawData, &messages, xml2json.SmsXmlFixUp, xml2json.NoOp)
+	xml2json.XMLParse(rawData, &messages, xml2json.SmsXMLFixUp, xml2json.NoOp)
 	xml2json.DumpParsedMessages(os.Stderr, messages)
 	smsDbIO := xml2json.NewSmsDbIO()
 	for _, msg := range messages.Messages {

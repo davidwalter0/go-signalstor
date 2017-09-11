@@ -4,8 +4,6 @@ import (
 	"fmt"
 )
 
-var ftpcfg = &Ftp{}
-
 // Ftp options to load from flags or env variables
 type Ftp struct {
 	Host     string

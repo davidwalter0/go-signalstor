@@ -3,6 +3,8 @@ package xml2json
 import (
 	"fmt"
 	"testing"
+
+	"github.com/davidwalter0/xml2json"
 )
 
 var debug = false
@@ -59,36 +61,36 @@ func Test_UnixTimeFunctions(t *testing.T) {
 		if debug {
 			fmt.Println(u)
 		}
-		unixTime = UnixTime(itm.UnixTime).Unix()*1000 + u.n
+		unixTime = xml2json.UnixTime(itm.UnixTime).Unix()*1000 + u.n
 		if unixTime != itm.UnixTime {
 			t.Errorf("UnixTime() was incorrect, want %d got: %d.", itm.UnixTime, unixTime)
 		}
 
-		unixTime = UnixTime(itm.UnixTime).Unix()
+		unixTime = xml2json.UnixTime(itm.UnixTime).Unix()
 		if unixTime != itm.UnixDateSplit.t {
 			t.Errorf("UnixTime() was incorrect, want %d got: %d.", itm.UnixDateSplit.t, unixTime)
 		}
 		u = itm.UnixDateSplit
-		unixTime = UnixTimeWithMilli(u.t, u.n).Unix()*1000 + u.n
+		unixTime = xml2json.UnixTimeWithMilli(u.t, u.n).Unix()*1000 + u.n
 		if unixTime != itm.UnixTime {
 			t.Errorf("UnixTime() was incorrect, want %d got: %d.", itm.UnixTime, unixTime)
 		}
 		if debug {
-			fmt.Println(UnixTimeParseString(itm.UnixDate))
+			fmt.Println(xml2json.UnixTimeParseString(itm.UnixDate))
 		}
 		{
-			l, r := UnixTimeMsResolutionStr2Int(itm.UnixDate)
+			l, r := xml2json.UnixTimeMsResolutionStr2Int(itm.UnixDate)
 			if debug {
 				fmt.Printf(">>>  %10d   :%03d\n", l, r)
 				fmt.Printf("time %10d:ms:%03d\n", l, r)
 			}
-			timeString := UnixTimeStringWithMsToPrintable(itm.UnixDate)
+			timeString := xml2json.UnixTimeStringWithMsToPrintable(itm.UnixDate)
 			ln := len(timeString)
 			if timeString[:ln-4] != itm.DefaultDate[:ln-4] {
 				t.Errorf("UnixTime() was incorrect, want %s got: %s.", itm.DefaultDate[:ln-4], timeString[:ln-4])
 			}
 			if debug {
-				fmt.Println(UnixTimeStringWithMsToPrintable(itm.UnixDate))
+				fmt.Println(xml2json.UnixTimeStringWithMsToPrintable(itm.UnixDate))
 			}
 		}
 
@@ -172,7 +174,7 @@ Date    : Mon, 25 Apr 2016 18:00:30 EDT
 Address : +15555555555
 Message : More text
 `
-	var message SmsMessage = SmsMessage{
+	var message xml2json.SmsMessage = xml2json.SmsMessage{
 		ContactName:  "name",
 		ReadableDate: "Mon, 25 Apr 2016 18:00:30 EDT",
 		Address:      "+15555555555",

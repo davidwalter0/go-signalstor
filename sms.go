@@ -2,8 +2,6 @@ package xml2json
 
 import (
 	"database/sql"
-	// "encoding/base32"
-	// "encoding/base64"
 	"fmt"
 	"log"
 	"time"
@@ -14,18 +12,27 @@ import (
 	"github.com/davidwalter0/go-persist/uuid"
 )
 
+// SmsDb db connection and i/o interface object
+type SmsDb *persist.Database
+
 var smsDB = &persist.Database{}
 var standAlone = true
 var dropAll = true
-var initialized = false
+var smsDbInitialized = false
 var monitor = mutex.NewMonitor()
 
+// ConfigureDb alias for smsDbInitialize
+func ConfigureDb() SmsDb {
+	smsDbInitialize()
+	return smsDB
+}
+
 // Initialize a database connection
-func initialize() {
-	if !initialized {
+func smsDbInitialize() {
+	if !smsDbInitialized {
 		defer monitor()()
-		if !initialized {
-			initialized = true
+		if !smsDbInitialized {
+			smsDbInitialized = true
 			if standAlone {
 				smsDB.ConfigEnvWPrefix("SQL", false)
 				smsDB.Connect()
@@ -75,10 +82,10 @@ var SmsDbIOSchema = schema.DBSchema{
 }
 
 // SmsDbIOKey accessible object for database smsentication table I/O
-type SmsDbIOKey struct {
-	Address string `json:"address"`
-	Date    string `json:"date"`
-}
+// type SmsDbIOKey struct {
+// 	Address string `json:"address"`
+// 	Date    string `json:"date"`
+// }
 
 // SmsDbIO object db I/O for sms table
 type SmsDbIO struct {
@@ -93,7 +100,7 @@ type SmsDbIO struct {
 // NewKey create the key fields for an sms struct, notice that address
 // uses account
 func NewKey(address, date string) *SmsDbIO {
-	initialize()
+	smsDbInitialize()
 	return &SmsDbIO{
 		Msg: SmsMessage{
 			Address: address,
@@ -103,24 +110,24 @@ func NewKey(address, date string) *SmsDbIO {
 	}
 }
 
-// NewSmsDbIO initialize an sms struct
+// NewSmsDbIO smsDbInitialize an sms struct
 func NewSmsDbIO() *SmsDbIO {
-	initialize()
+	smsDbInitialize()
 	return &SmsDbIO{
 		db: smsDB,
 	}
 }
 
-// NewSmsDbIOFromMsg initialize an sms struct
+// NewSmsDbIOFromMsg smsDbInitialize an sms struct
 func NewSmsDbIOFromMsg(from *SmsMessage) *SmsDbIO {
-	initialize()
+	smsDbInitialize()
 	return &SmsDbIO{
 		Msg: *from,
 		db:  smsDB,
 	}
 }
 
-// // NewSmsDbIO initialize an sms struct
+// // NewSmsDbIO smsDbInitialize an sms struct
 // func NewSmsDbIO(address, date, subject, key, body, contactName, readableDate string) *SmsDbIO {
 // 	return &SmsDbIO{
 // 		Msg: SmsMessage{
@@ -135,12 +142,12 @@ func NewSmsDbIOFromMsg(from *SmsMessage) *SmsDbIO {
 // 	}
 // }
 
-// CopySmsMessage initialize an SmsDbIO struct from a message
+// CopySmsMessage smsDbInitialize an SmsDbIO struct from a message
 func (sms *SmsDbIO) CopySmsMessage(from *SmsMessage) {
 	sms.Msg = *from
 }
 
-// CopySmsDbIO initialize an sms struct
+// CopySmsDbIO smsDbInitialize an sms struct
 func (sms *SmsDbIO) CopySmsDbIO(from *SmsDbIO) {
 	sms.ID = from.ID
 	sms.GUID = from.GUID
@@ -149,8 +156,8 @@ func (sms *SmsDbIO) CopySmsDbIO(from *SmsDbIO) {
 	sms.Changed = from.Changed
 }
 
-// CopyKey initialize the sms's table key in the struct
-func (sms *SmsDbIO) CopyKey(from *SmsDbIO) {
+// CopyKey smsDbInitialize the sms's table key in the struct
+func (sms *SmsDbIO) CopySmSDbIOKey(from *SmsDbIO) {
 	sms.Msg.Address = from.Msg.Address
 	sms.Msg.Date = from.Msg.Date
 }
@@ -158,7 +165,7 @@ func (sms *SmsDbIO) CopyKey(from *SmsDbIO) {
 // Create a row in a table
 func (sms *SmsDbIO) Create() {
 	if sms.db == nil {
-		panic("SmsDbIO.db uninitialized")
+		panic("SmsDbIO.db unsmsDbInitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -184,15 +191,19 @@ VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', CURRENT_TIMESTAMP, CURRENT_TIM
 		sms.Msg.Body,
 		sms.Msg.ReadableDate,
 	)
-	fmt.Println(insert)
-	fmt.Println(smsDB.Exec(insert))
-	fmt.Println("Count", sms.Count())
+	// fmt.Println(insert)
+	// fmt.Println(smsDB.Exec(insert))
+	_, err := smsDB.Exec(insert)
+	if err != nil {
+		log.Println("Row count query error", err)
+	}
+	// fmt.Println("Count", sms.Count())
 }
 
 // Read row from db using sms key fields for query
 func (sms *SmsDbIO) Read() bool {
 	if sms.db == nil {
-		panic("SmsDbIO.db uninitialized")
+		panic("SmsDbIO.db unsmsDbInitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -248,14 +259,14 @@ AND
 			sms.Changed)
 	}
 	count := sms.Count()
-	fmt.Println("Count", count)
+	// fmt.Println("Count", count)
 	return count != 0
 }
 
 // Update row from db using sms key fields
 func (sms *SmsDbIO) Update() {
 	if sms.db == nil {
-		panic("SmsDbIO.db uninitialized")
+		panic("SmsDbIO.db unsmsDbInitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -315,13 +326,13 @@ AND
 			sms.Created,
 			sms.Changed)
 	}
-	fmt.Println("Count", sms.Count())
+	// fmt.Println("Count", sms.Count())
 }
 
 // Delete row from db using sms key fields
 func (sms *SmsDbIO) Delete() {
 	if sms.db == nil {
-		panic("SmsDbIO.db uninitialized")
+		panic("SmsDbIO.db unsmsDbInitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -371,13 +382,13 @@ AND
 			sms.Created,
 			sms.Changed)
 	}
-	fmt.Println("Count", sms.Count())
+	// fmt.Println("Count", sms.Count())
 }
 
 // Count rows for keys in sms
 func (sms *SmsDbIO) Count() (count int) {
 	if sms.db == nil {
-		panic("SmsDbIO.db uninitialized")
+		panic("SmsDbIO.db unsmsDbInitialized")
 	}
 	smsDB := sms.db
 	query := fmt.Sprintf(`

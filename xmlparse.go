@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davidwalter0/db/uuid"
-	"github.com/davidwalter0/go-cfg"
-	"github.com/davidwalter0/go-ftp"
+	// "github.com/davidwalter0/db/uuid"
+	// "github.com/davidwalter0/go-cfg"
+	// "github.com/davidwalter0/go-ftp"
 	"github.com/davidwalter0/go-xml2json"
 )
 
@@ -22,56 +22,6 @@ const (
 	CharSixTeen = "\x00"
 	CharZero    = "\x16"
 )
-
-func deferable(connection *ftp.Connection) {
-	defer func() {
-		err := connection.Logout()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-}
-
-// Download to file if writingToFile and use configured filename
-// returning and empty buffer. If writingToFile is true return a
-// buffer
-func Download(cfg *Ftp, writingToFile bool) ([]byte, error) {
-	var result []byte
-	var err error
-
-	var connection *ftp.Connection
-	var connectString = fmt.Sprintf("%s:%s", cfg.Host, cfg.Port)
-	connection, err = ftp.Dial(connectString)
-	defer deferable(connection)
-	if err != nil {
-		fmt.Printf("error: connection error %v\n", err)
-		os.Exit(-1)
-	}
-
-	// login
-	err = connection.Login(cfg.User, cfg.Password)
-
-	if err != nil {
-		log.Fatalf("error: login failure %v\n", err)
-		os.Exit(-1)
-	}
-
-	if writingToFile {
-		err = connection.Get(cfg.Filename, fmt.Sprintf("%s-%s", cfg.Filename, uuid.GUID()), ftp.BINARY, timeout)
-		if err != nil {
-			fmt.Printf("error: download failed %v\n", err)
-			os.Exit(-1)
-		}
-	} else {
-		result, err = connection.GetBuffer(cfg.Filename, ftp.BINARY, timeout)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
-	}
-	return result, err
-}
 
 // Byte2Struct xml and update a struct from the object
 // func Byte2Struct(buffer *bytes.Buffer) {
@@ -181,7 +131,6 @@ func DumpParsedMessages(file io.Writer, messages SmsMessages) {
 		tmpsms := sms
 		date, _ := strconv.Atoi(sms.Date)
 		address := sms.Address
-		// fmt.Println(sms.ContactName)
 		if _, ok := byUserSMS[address]; !ok {
 			byUserSMS[address] = make(map[int]*SmsMessage)
 		}
@@ -210,7 +159,7 @@ func DumpParsedMessages(file io.Writer, messages SmsMessages) {
 		}
 		sort.Ints(dates)
 		for _, date := range dates {
-			fmt.Println(byUserSMS[address][date])
+			fmt.Fprintln(file, byUserSMS[address][date])
 		}
 	}
 }
@@ -314,11 +263,10 @@ func XMLParseArray(rawData []byte, dest interface{},
 	var err error
 	var line string
 	var xmlFixed string
-	fmt.Fprintf(os.Stderr, "%v", string(rawData))
+	// fmt.Fprintf(os.Stderr, "%v", string(rawData))
 	scanner := bufio.NewScanner(bytes.NewReader(rawData))
 	for scanner.Scan() {
 		line, err = xmlFixUp(scanner.Text())
-		fmt.Println(line)
 		if err != nil {
 			log.Fatalf("error: %v\n", err)
 		}
@@ -335,26 +283,12 @@ func XMLParseArray(rawData []byte, dest interface{},
 	}
 	// parser error : xmlParseCharRef: invalid xmlChar value 16
 	// parser error : xmlParseCharRef: invalid xmlChar value 0
-	// fmt.Println(buffer.String())
-	var text string
-	text = strings.Replace(buffer.String(), fmt.Sprintf("%c", 16), " ", -1)
-	text = strings.Replace(text, fmt.Sprintf("%c", 0), " ", -1)
+	var text = buffer.String()
+	// text = strings.Replace(buffer.String(), fmt.Sprintf("%c", 16), " ", -1)
+	// text = strings.Replace(text, fmt.Sprintf("%c", 0), " ", -1)
 	// fmt.Println(text)
 	if err = json.Unmarshal([]byte(text), dest); err != nil {
 		fmt.Fprintf(os.Stderr, "error %v\n", err)
 	}
 	handler(dest)
-}
-
-// Configure load the configuration from environment, or cli flags
-func Configure() *Ftp {
-	if err := cfg.Parse(ftpcfg); err != nil {
-		log.Fatalf("configuration error %v", err)
-	}
-	if ftpcfg.Debug {
-		fmt.Printf("%v %T\n", *ftpcfg, *ftpcfg)
-		jsonText, _ := json.MarshalIndent(ftpcfg, "", "  ")
-		fmt.Printf("\n%v\n", string(jsonText))
-	}
-	return ftpcfg
 }
