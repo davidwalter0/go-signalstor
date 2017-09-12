@@ -91,6 +91,28 @@ func SmsXMLFixUp(xml string) (string, error) {
 	return line, nil
 }
 
+// SmsXMLFixUpChan preprocessor for xml string
+func SmsXMLFixUpChan(reader, writer chan string) {
+	for xml := range reader {
+		line := strings.TrimLeft(xml, " ")
+		prefix := line[0:5]
+		// fmt.Printf("SmsXMLFixUp [%s] %s\n", prefix, line)
+		switch prefix {
+		case "<?xml", "<smse", "</sms":
+		case "<sms ":
+			eol := "> </sms>"
+			endElem := "/>"
+			if strings.Index(line, eol) == -1 {
+				end := strings.Index(line, endElem)
+				line = line[0:end] + eol
+			}
+			writer <- line
+		default:
+			writer <- ""
+		}
+	}
+}
+
 type XMLFixUp func(xml string) (string, error)
 type StructHandler func(st interface{})
 
@@ -174,4 +196,113 @@ func XMLParseArray(rawData []byte, dest interface{},
 		fmt.Fprintf(os.Stderr, "error %v\n", err)
 	}
 	handler(dest)
+}
+
+////////////////////////////////////////////////////////////////////////
+// Line oriented implementation
+////////////////////////////////////////////////////////////////////////
+
+// GoChannelLineReader open, read, write line by line, run as go func
+func GoChannelLineReader(filename string, writer chan *string) {
+	var err error
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer close(writer)
+	defer func() {
+		_ = file.Close()
+	}()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		writer <- &line
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// XMLParsePublish assumes line oriented xml elements raw data is an xml
+// document, dest is a struct unmarshal target
+func XMLParsePublish(filename string, messages chan *SmsMessage) {
+	var xmlFixUp = SmsXMLFixUp
+	var buffer *bytes.Buffer
+	var err error
+	var line string
+	var scanner = make(chan *string)
+	defer close(messages)
+
+	go GoChannelLineReader(filename, scanner)
+
+	for next := range scanner {
+		line, err = xmlFixUp(*next)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(line) > 0 {
+			var text = line
+			xml := strings.NewReader(text)
+			buffer, err = xml2json.Convert(xml)
+			if err != nil {
+				continue
+			}
+
+			if len(buffer.Bytes()) > 0 {
+				var message SmsMessageUnmarshal
+				if err = json.Unmarshal(buffer.Bytes(), &message); err != nil {
+					continue
+				}
+				// unbuffered channel to downstream
+				messages <- &message.SmsMessage
+			}
+		}
+	}
+}
+
+// DumpParsedMessagesSubscribe the data from the xml parsed file to
+// file io.Writer reading objects one at a time from messages channel
+// order by address then by date
+func DumpParsedMessagesSubscribe(file io.Writer, messages chan *SmsMessage, done chan bool) {
+
+	var byUserSMS map[string]map[int]*SmsMessage = make(map[string]map[int]*SmsMessage)
+
+	for sms := range messages {
+		tmpsms := *sms
+		date, _ := strconv.Atoi(sms.Timestamp)
+		address := sms.Address
+		if _, ok := byUserSMS[address]; !ok {
+			byUserSMS[address] = make(map[int]*SmsMessage)
+		}
+		if _, ok := byUserSMS[address][date]; !ok {
+			byUserSMS[address][date] = &tmpsms
+		} else {
+			byUserSMS[address][date].Body += sms.Body
+		}
+
+	}
+
+	addresses := make([]string, 0, len(byUserSMS))
+	for address := range byUserSMS {
+		addresses = append(addresses, address)
+	}
+
+	sort.Strings(addresses)
+
+	for _, address := range addresses {
+		fmt.Fprintln(file, "==========================================================")
+		fmt.Fprintln(file, "Address", address)
+		fmt.Fprintln(file, "==========================================================")
+
+		dates := make([]int, 0, len(byUserSMS[address]))
+		for date := range byUserSMS[address] {
+			dates = append(dates, date)
+		}
+		sort.Ints(dates)
+		for _, date := range dates {
+			fmt.Fprintln(file, byUserSMS[address][date])
+		}
+	}
+	done <- true
 }
