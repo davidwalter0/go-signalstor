@@ -12,7 +12,7 @@ import (
 
 var smsDB = &persist.Database{}
 var standAlone = true
-var dropAll = true
+var dropAll = false
 var smsDbInitialized = false
 var monitor = mutex.NewMonitor()
 
@@ -39,8 +39,8 @@ func (sms *SmsDbIO) smsDbInitialize() {
 				smsDB.Connect()
 				if dropAll {
 					smsDB.DropAll(SmsDbIOSchema)
+					smsDB.Initialize(SmsDbIOSchema)
 				}
-				smsDB.Initialize(SmsDbIOSchema)
 			}
 		}
 	}
@@ -57,8 +57,8 @@ func smsDbInitialize() {
 				smsDB.Connect()
 				if dropAll {
 					smsDB.DropAll(SmsDbIOSchema)
+					smsDB.Initialize(SmsDbIOSchema)
 				}
-				smsDB.Initialize(SmsDbIOSchema)
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func NewKey(address, timestamp string) *SmsDbIO {
 	}
 }
 
-// NewSmsDbIO smsDbInitialize an sms struct
+// NewSmsDbIO initialize an sms struct
 func NewSmsDbIO() *SmsDbIO {
 	smsDbInitialize()
 	return &SmsDbIO{
@@ -124,7 +124,7 @@ func NewSmsDbIO() *SmsDbIO {
 	}
 }
 
-// NewSmsDbIOFromMsg smsDbInitialize an sms struct
+// NewSmsDbIOFromMsg initialize an sms struct
 func NewSmsDbIOFromMsg(from *SmsMessage) *SmsDbIO {
 	smsDbInitialize()
 	return &SmsDbIO{
@@ -133,13 +133,19 @@ func NewSmsDbIOFromMsg(from *SmsMessage) *SmsDbIO {
 	}
 }
 
-// CopySmsMessage smsDbInitialize an SmsDbIO struct from a message
+// Copy initialize an SmsDbIO struct from a message
+func (sms *SmsMessage) Copy(from *SmsMessage) *SmsMessage {
+	*sms = *from
+	return sms
+}
+
+// CopySmsMessage initialize an SmsDbIO struct from a message
 func (sms *SmsDbIO) CopySmsMessage(from *SmsMessage) *SmsDbIO {
 	sms.Msg = *from
 	return sms
 }
 
-// CopySmsDbIO smsDbInitialize an sms struct
+// CopySmsDbIO initialize an sms struct
 func (sms *SmsDbIO) CopySmsDbIO(from *SmsDbIO) *SmsDbIO {
 	sms.ID = from.ID
 	sms.GUID = from.GUID
@@ -149,12 +155,17 @@ func (sms *SmsDbIO) CopySmsDbIO(from *SmsDbIO) *SmsDbIO {
 	return sms
 }
 
+// Copy initialize an sms struct
+func (sms *SmsDbIO) Copy(from *SmsDbIO) *SmsDbIO {
+	return sms.CopySmsDbIO(from)
+}
+
 // CopyKey from SmsDbIO object
 func (sms *SmsDbIO) CopyKey(from *SmsDbIO) *SmsDbIO {
 	return sms.CopySmSDbIOKey(from)
 }
 
-// CopySmSDbIOKey smsDbInitialize the sms's table key in the struct
+// CopySmSDbIOKey initialize the sms's table key in the struct
 func (sms *SmsDbIO) CopySmSDbIOKey(from *SmsDbIO) *SmsDbIO {
 	sms.Msg.Address = from.Msg.Address
 	sms.Msg.Timestamp = from.Msg.Timestamp
@@ -199,7 +210,7 @@ VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', CURRENT_TIMESTAMP, CURRE
 // Read row from db using sms key fields for query
 func (sms *SmsDbIO) Read() (err error) {
 	if sms.db == nil {
-		panic("SmsDbIO.db unsmsDbInitialized")
+		panic("SmsDbIO.db uninitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -254,7 +265,7 @@ AND
 // Update row from db using sms key fields
 func (sms *SmsDbIO) Update() (err error) {
 	if sms.db == nil {
-		panic("SmsDbIO.db unsmsDbInitialized")
+		panic("SmsDbIO.db uninitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -289,7 +300,7 @@ AND
 // Delete row from db using sms key fields
 func (sms *SmsDbIO) Delete() (err error) {
 	if sms.db == nil {
-		panic("SmsDbIO.db unsmsDbInitialized")
+		panic("SmsDbIO.db uninitialized")
 	}
 	smsDB := sms.db
 	// ignore DB & id
@@ -312,7 +323,7 @@ AND
 // Count rows for keys in sms
 func (sms *SmsDbIO) Count() (count int) {
 	if sms.db == nil {
-		panic("SmsDbIO.db unsmsDbInitialized")
+		panic("SmsDbIO.db uninitialized")
 	}
 	smsDB := sms.db
 	query := fmt.Sprintf(`
@@ -336,4 +347,60 @@ AND
 		log.Println("Row count query error", err)
 	}
 	return count
+}
+
+// ReadAll rows queried from db using sms key fields for query
+func (sms *SmsDbIO) ReadAll(publish chan *SmsMessage) (err error) {
+	if sms.db == nil {
+		panic("SmsDbIO.db uninitialized")
+	}
+	smsDB := sms.db
+	// ignore DB & id
+	query := fmt.Sprintf(`
+SELECT 
+  id,
+  guid, 
+  address,
+  timestamp,
+  subject,
+  contact_name,
+  readable_date,
+  body,
+  type,
+  created,
+  changed
+FROM
+   sms 
+WHERE
+  address = '%s'
+`,
+		sms.Msg.Address,
+	)
+	rows := smsDB.Query(query)
+	defer func() {
+		if err = rows.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	for rows.Next() {
+		if err = rows.Scan(
+			&sms.ID,
+			&sms.GUID,
+			&sms.Msg.Address,
+			&sms.Msg.Timestamp,
+			&sms.Msg.Subject,
+			&sms.Msg.ContactName,
+			&sms.Msg.Date,
+			&sms.Msg.Body,
+			&sms.Msg.Type,
+			&sms.Created,
+			&sms.Changed); err != nil {
+			return err
+		}
+		var row = &SmsDbIO{}
+		row.CopySmsDbIO(sms)
+		publish <- &row.Msg
+	}
+	return err
 }

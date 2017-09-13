@@ -54,7 +54,5 @@ func main() {
 			}
 			fmt.Println(">>Decrypted", smsRead)
 		}
-
-		break
 	}
 }
