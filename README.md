@@ -3,21 +3,22 @@ This is test software experimenting with:
 
 - xml - json conversion using an xml library
 - ftp transfer tests
+- download signal formatted xml backup
+- load to database
+- client side encrypt before write to database
 
-Todo 
-
-- database i/o using persist library
-- encryption
 
 The goal is to demonstrate transformation and secure backup of some
-source data
+source data using whisper systems signal xml backup format as an
+exmaple.
 
 ---
 
 ```
-go get github.com/davidwalter0/xml2json
+go get github.com/davidwalter0/go-signalstor
 
-cd ${GOPATH}/src/github.com/davidwalter0/xml2json/examples
+cd ${GOPATH}/src/github.com/davidwalter0/go-signalstor/examples
+
 ```
 
 - fetch a version of a signal backup xml file 
@@ -31,7 +32,28 @@ export FTP_FILENAME=/path/to/SignalPlaintextBackup.xml
 go run signalxmlparse.go
 ```
 
+---
+Commands
 
+- ftpbufferget.go
+  read a file into a buffer from ftp
+- ftpfileget.go
+  download a file
+- signalxmlparsechan.go
+  parse an input file using channels for unbuffered i/o
+- signaldbchanreadall.go
+  read all data previously loaded into a database table using channels
+- signalxmlparsechanwriteall.go
+  parse xml from file using channels between functions and write to
+  database
+- signalxmlparsedbwriteencrypted.go
+  encrypt non-key data and write to database, ignore single byte data
+  with little variance to limit simplifying known inputs for brute
+  force attacks
+- signalxmlparsedbwrite.go
+  write data to database
+- signalxmlparse.go
+  parse xml and dump to stderr
 
 ---
 

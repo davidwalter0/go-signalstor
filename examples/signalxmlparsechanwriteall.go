@@ -1,28 +1,28 @@
 package main
 
 import (
-	"github.com/davidwalter0/xml2json"
+	"github.com/davidwalter0/go-signalstor"
 )
 
 func configure() (filename string) {
-	ftp := xml2json.ConfigureFtp()
+	ftp := signalstor.ConfigureFtp()
 	return ftp.Filename
 }
 
 func main() {
 	var done = make(chan bool)
 
-	var messages = make(chan *xml2json.SmsMessage)
+	var messages = make(chan *signalstor.SmsMessage)
 
-	go xml2json.XMLParsePublish(configure(), messages)
+	go signalstor.XMLParsePublish(configure(), messages)
 	go func() {
-		var smsDbIO = xml2json.NewSmsDbIO()
+		var smsDbIO = signalstor.NewSmsDbIO()
 		for message := range messages {
 			smsDbIO.Msg = *message
 			smsDbIO.Create()
 		}
 		done <- true
 	}()
-	// go xml2json.DumpParsedMessagesSubscribe(os.Stderr, messages, done)
+	// go signalstor.DumpParsedMessagesSubscribe(os.Stderr, messages, done)
 	<-done
 }

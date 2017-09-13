@@ -1,4 +1,4 @@
-package xml2json
+package signalstor
 
 import (
 	"encoding/json"

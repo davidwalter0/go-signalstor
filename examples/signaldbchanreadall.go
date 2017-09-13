@@ -3,19 +3,19 @@ package main
 import (
 	"os"
 
-	"github.com/davidwalter0/xml2json"
+	"github.com/davidwalter0/go-signalstor"
 )
 
 func configure() (filename string) {
-	ftp := xml2json.ConfigureFtp()
+	ftp := signalstor.ConfigureFtp()
 	return ftp.Filename
 }
 
 func main() {
 	var done = make(chan bool)
 
-	var messages = make(chan *xml2json.SmsMessage)
-	var smsDbIO = xml2json.NewSmsDbIO()
+	var messages = make(chan *signalstor.SmsMessage)
+	var smsDbIO = signalstor.NewSmsDbIO()
 	smsDbIO.Msg.Address = "+15555555555"
 
 	go func() {
@@ -23,6 +23,6 @@ func main() {
 		smsDbIO.ReadAll(messages)
 	}()
 
-	go xml2json.DumpParsedMessagesSubscribe(os.Stderr, messages, done)
+	go signalstor.DumpParsedMessagesSubscribe(os.Stderr, messages, done)
 	<-done
 }

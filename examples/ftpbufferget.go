@@ -3,13 +3,13 @@ package main
 import (
 	"log"
 
-	"github.com/davidwalter0/xml2json"
+	"github.com/davidwalter0/go-signalstor"
 )
 
 func main() {
 	writingToFile := false
-	cfg := xml2json.ConfigureFtp()
-	if content, err := xml2json.Download(cfg, writingToFile); err != nil {
+	cfg := signalstor.ConfigureFtp()
+	if content, err := signalstor.Download(cfg, writingToFile); err != nil {
 		log.Fatal(err)
 	} else {
 		log.Println(string(content))

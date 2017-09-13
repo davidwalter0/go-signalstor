@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/davidwalter0/xml2json"
+	"github.com/davidwalter0/go-signalstor"
 	"io/ioutil"
 	"os"
 )
@@ -11,12 +11,12 @@ func main() {
 
 	var key = []byte("LKHlhb899Y09olUi")
 
-	smsRead := xml2json.NewSmsDbIO()
+	smsRead := signalstor.NewSmsDbIO()
 
-	ftp := xml2json.ConfigureFtp()
+	ftp := signalstor.ConfigureFtp()
 	var err error
 	var rawData []byte
-	var messages xml2json.SmsMessages
+	var messages signalstor.SmsMessages
 
 	rawData, err = ioutil.ReadFile(ftp.Filename)
 	if err != nil {
@@ -24,8 +24,8 @@ func main() {
 		os.Exit(-1)
 	}
 
-	xml2json.XMLParse(rawData, &messages, xml2json.SmsXMLFixUp, xml2json.NoOp)
-	smsDbIO := xml2json.NewSmsDbIO()
+	signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
+	smsDbIO := signalstor.NewSmsDbIO()
 
 	for _, msg := range messages.Messages {
 		fmt.Println(msg)
