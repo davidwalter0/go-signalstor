@@ -1,6 +1,8 @@
 package signalstor
 
 import (
+	"database/sql"
+
 	"fmt"
 	"log"
 
@@ -63,10 +65,6 @@ func smsDbInitialize() {
 		}
 	}
 }
-
-// func Initialize() {
-// 	init()
-// }
 
 // SmsDbIOSchema describes the table and triggers for persisting
 // smsentications from totp objects from twofactor
@@ -237,8 +235,10 @@ AND
 		sms.Msg.Address,
 		sms.Msg.Timestamp,
 	)
-	// fmt.Println(query)
-	rows := smsDB.Query(query)
+	var rows *sql.Rows
+	if rows, err = smsDB.Query(query); err != nil {
+		return
+	}
 	defer func() {
 		if err := rows.Close(); err != nil {
 			panic(err)
@@ -376,7 +376,10 @@ WHERE
 `,
 		sms.Msg.Address,
 	)
-	rows := smsDB.Query(query)
+	var rows *sql.Rows
+	if rows, err = smsDB.Query(query); err != nil {
+		return
+	}
 	defer func() {
 		if err = rows.Close(); err != nil {
 			panic(err)

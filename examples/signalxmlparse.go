@@ -9,6 +9,7 @@ import (
 
 func main() {
 	ftp := signalstor.ConfigureFtp()
+	version()
 	var err error
 	var rawData []byte
 	var messages signalstor.SmsMessages

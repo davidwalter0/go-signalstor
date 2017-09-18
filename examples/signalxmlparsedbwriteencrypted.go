@@ -11,9 +11,10 @@ func main() {
 
 	var key = []byte("LKHlhb899Y09olUi")
 
+	ftp := signalstor.ConfigureFtp()
+	version()
 	smsRead := signalstor.NewSmsDbIO()
 
-	ftp := signalstor.ConfigureFtp()
 	var err error
 	var rawData []byte
 	var messages signalstor.SmsMessages

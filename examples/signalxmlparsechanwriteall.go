@@ -6,6 +6,7 @@ import (
 
 func configure() (filename string) {
 	ftp := signalstor.ConfigureFtp()
+	version()
 	return ftp.Filename
 }
 

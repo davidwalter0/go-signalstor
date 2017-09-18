@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/davidwalter0/go-signalstor"
 	"io/ioutil"
 	"os"
+
+	"github.com/davidwalter0/go-signalstor"
 )
 
 func main() {
 
 	ftp := signalstor.ConfigureFtp()
+	version()
+
 	var err error
 	var rawData []byte
 	var messages signalstor.SmsMessages

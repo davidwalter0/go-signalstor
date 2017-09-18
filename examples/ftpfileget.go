@@ -9,6 +9,7 @@ import (
 func main() {
 	writingToFile := true
 	cfg := signalstor.ConfigureFtp()
+	version()
 	if _, err := signalstor.Download(cfg, writingToFile); err != nil {
 		log.Fatal(err)
 	}
