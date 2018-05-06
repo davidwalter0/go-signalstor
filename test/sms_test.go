@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -74,12 +75,21 @@ func TestSmsCopyMessage(t *testing.T) {
 	}
 }
 
+/*
 var XMLText = `<sms protocol="0" address="+15555555555" contact_name="Self" date="1493140602697" readable_date="Tue, 25 Apr 2017 13:16:42 EDT" type="1" subject="null" body="body XMLText" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
 <sms protocol="0" address="22000" contact_name="null" date="1493139630014" readable_date="Tue, 25 Apr 2017 13:00:30 EDT" type="1" subject="null" body="Account notification: for u@abc.123" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />`
+*/
+
+var XMLText = []byte(`<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!-- File Created By Signal -->
+<smses count="2">
+  <sms protocol="0" address="+15555555555" contact_name="Self" date="1493140602697" readable_date="Tue, 25 Apr 2017 13:16:42 EDT" type="1" subject="null" body="body XMLText" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
+  <sms protocol="0" address="22000" contact_name="null" date="1493139630014" readable_date="Tue, 25 Apr 2017 13:00:30 EDT" type="1" subject="null" body="Account notification: for u@abc.123" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
+</smses>
+`)
 
 func JsonDump(st interface{}) {
-	// lhs, err := json.MarshalIndent(st, "", "  ")
-	lhs, err := json.Marshal(st)
+	lhs, err := json.MarshalIndent(st, "", "  ")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
@@ -93,33 +103,15 @@ func NoFixUp(xml string) (string, error) {
 
 func TestSmsParseArray(t *testing.T) {
 
-	var messages signalstor.SmsMessages
-
-	head := `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-	<!-- File Created By Signal -->
-	<smses count="2">
-	`
-	tail := `</smses>`
-
-	// signalstor.XMLParseArray([]byte(head+XMLText+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
-	signalstor.XMLParse([]byte(head+XMLText+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
-
-	// for _, msg := range messages.Messages {
-	// 	fmt.Println(msg)
-	// }
+	var messages = createMessages()
 
 	lhs, err := json.Marshal(messages)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
-	// for _, msg := range messages.Messages {
-	// 	fmt.Println(msg)
-	// 	fmt.Println(string(lhs))
-	// }
-
 	var wantedJSON = `{"sms":[{"contact_name":"Self","date":"1493140602697","readable_date":"Tue, 25 Apr 2017 13:16:42 EDT","address":"+15555555555","subject":"null","body":"body XMLText","type":"1"},{"contact_name":"null","date":"1493139630014","readable_date":"Tue, 25 Apr 2017 13:00:30 EDT","address":"22000","subject":"null","body":"Account notification: for u@abc.123","type":"1"}]}`
-	// gotJSON := fmt.Sprintf("%s", string(lhs))
+
 	type Msg map[string][]map[string]string
 	var wanted Msg
 	var got Msg
@@ -131,24 +123,14 @@ func TestSmsParseArray(t *testing.T) {
 		t.Fatalf("json.Unmarshal fail %v", err)
 	}
 
-	// if wantedJSON != gotJSON {
-	// 	t.Fatalf("parse object failed: wanted\n%s\ngot\n%s\n", wantedJSON, gotJSON)
-	// 	w
-	// }
-
+	if !reflect.DeepEqual(wanted, got) {
+		t.Fatalf("parse object failed: wanted\n%s\ngot\n%s\n", wanted, got)
+	}
 }
 
 func createMessages() signalstor.SmsMessages {
 	var messages signalstor.SmsMessages
-
-	head := `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<!-- File Created By Signal -->
-<smses count="2">
-`
-	tail := `</smses>`
-
-	signalstor.XMLParseArray([]byte(head+XMLText+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
-
+	signalstor.XMLParse(XMLText, &messages, signalstor.SmsXMLFixUp, signalstor.SmsMessageValidate)
 	_, err := json.Marshal(messages)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)

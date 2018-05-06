@@ -112,7 +112,7 @@ func TestBase58Encode(t *testing.T) {
 	}
 	{
 		var encoded = nti.Key.Encode()
-		var got = signalstor.DecodeKey(encoded)
+		var got = signalstor.DecodeKey(string(encoded))
 
 		if debug {
 			fmt.Println("nti ", string((*nti.Key)[:]))
@@ -128,7 +128,7 @@ func TestBase58Encode(t *testing.T) {
 	}
 	{
 		var encoded = nti.Nonce.Encode()
-		var got = signalstor.DecodeNonce(encoded)
+		var got = signalstor.DecodeNonce(string(encoded))
 		if debug {
 			fmt.Println("nti  ", string((*nti.Nonce)[:]))
 			fmt.Println("got ", string(got[:]))
@@ -139,6 +139,38 @@ func TestBase58Encode(t *testing.T) {
 		if debug {
 			fmt.Println("in  ", got.Encode())
 			fmt.Println("out ", encoded)
+		}
+	}
+
+	{
+		var ekey = nti.Key.Encode()
+		var got = ekey.Decode()
+
+		if debug {
+			fmt.Println("nti ", string((*nti.Key)[:]))
+			fmt.Println("got ", string(got[:]))
+		}
+		if !bytes.Equal(got[:], (*nti.Key)[:]) {
+			t.Fatalf("Symmetric operations failed encode/decode")
+		}
+		if debug {
+			fmt.Println("in  ", got.Encode())
+			fmt.Println("out ", ekey)
+		}
+	}
+	{
+		var enonce = nti.Nonce.Encode()
+		var got = enonce.Decode()
+		if debug {
+			fmt.Println("nti  ", string((*nti.Nonce)[:]))
+			fmt.Println("got ", string(got[:]))
+		}
+		if !bytes.Equal(got[:], (*nti.Nonce)[:]) {
+			t.Fatalf("Symmetric operations failed encode/decode")
+		}
+		if debug {
+			fmt.Println("in  ", got.Encode())
+			fmt.Println("out ", enonce)
 		}
 	}
 }

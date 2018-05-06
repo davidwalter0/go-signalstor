@@ -19,10 +19,11 @@ bin/%: examples/%.go $(package_files)
 .PHONY: test
 
 test: 
-	make -C test -f ../Makefile go-test
+# make -C test -f ../Makefile go-test
+	cd test; vgo test -v 
 
 go-test:
-	vgo test -v 
+	cd test; vgo test -v 
 
 install:
 	vgo install

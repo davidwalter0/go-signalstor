@@ -20,6 +20,6 @@ func main() {
 		os.Exit(-1)
 	}
 
-	signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
+	signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.SmsMessageValidate)
 	signalstor.DumpParsedMessages(os.Stderr, messages)
 }

@@ -283,7 +283,7 @@ UPDATE
   sms
 SET
   subject       = '%s',
-  contact_name  =  %d,
+  contact_name  =  %s,
   readable_date = '%s',
   body          = '%s'
   type          = '%s'
@@ -383,6 +383,7 @@ FROM
 WHERE
   address = '%s'
 `,
+		// where
 		sms.Msg.Address,
 	)
 	var rows *sql.Rows
