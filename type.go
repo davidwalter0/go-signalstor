@@ -1,4 +1,4 @@
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"fmt"
@@ -36,7 +36,8 @@ type Ftp struct {
 	Password string
 	Filename string
 	Phone    string
-	Debug    bool `help:"dump configuration environment or flag parse result\n\t"`
+	Key      string `json:"key"    doc:"encryption key for db write"`
+	Debug    bool   `json:"debug"  doc:"dump configuration environment or flag parse result"`
 }
 
 var timeout uint = 5 // seconds
@@ -89,5 +90,30 @@ Message   : %s
 		message.Date,
 		contact,
 		message.Body,
+	)
+}
+
+// String formatted SmsDbIO text
+func (message SmsDbIO) String() string {
+	contact := message.Msg.ContactName
+	return fmt.Sprintf(
+		`
+ID        : %12d
+GUID      : %s
+Address   : %s
+Timestamp : %s
+
+Date      : %s
+Contact   : %s
+Message   : %s
+`,
+		message.ID,
+		message.GUID,
+		message.Msg.Address,
+		message.Msg.Timestamp,
+
+		message.Msg.Date,
+		contact,
+		message.Msg.Body,
 	)
 }

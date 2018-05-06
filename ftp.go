@@ -1,12 +1,12 @@
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/davidwalter0/db/uuid"
 	"github.com/davidwalter0/go-ftp"
+	"github.com/davidwalter0/go-persist/uuid"
 )
 
 func ftpDeferableClose(connection *ftp.Connection) {

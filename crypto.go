@@ -1,6 +1,6 @@
 // Playbook - http://play.golang.org/p/3wFl4lacjX
 
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"bytes"

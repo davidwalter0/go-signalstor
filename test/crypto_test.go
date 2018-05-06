@@ -1,4 +1,4 @@
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"testing"

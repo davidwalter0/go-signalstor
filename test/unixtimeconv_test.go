@@ -1,4 +1,4 @@
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"fmt"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/davidwalter0/go-signalstor"
 )
-
-var debug = false
 
 type UnixDateSplit struct {
 	tstr string

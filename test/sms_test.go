@@ -1,4 +1,4 @@
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 
 func init() {
 	var envCfg = map[string]string{
-		// "FTP_FILENAME":          "SignalPlaintextBackup.xml",
+		// "FTP_FILENAME":          "SignalPlainXMLTextBackup.xml",
 		// "FTP_HOST":              "192.168.0.12",
 		// "FTP_PORT":              "2121",
 		// "FTP_USER":              "ftp",
@@ -34,6 +34,7 @@ func init() {
 		}
 	}
 
+	fmt.Printf("%v\n", signalstor.ConfigureDb())
 }
 
 func TestSmsCopyMessage(t *testing.T) {
@@ -73,7 +74,7 @@ func TestSmsCopyMessage(t *testing.T) {
 	}
 }
 
-var text = `<sms protocol="0" address="+15555555555" contact_name="Self" date="1493140602697" readable_date="Tue, 25 Apr 2017 13:16:42 EDT" type="1" subject="null" body="body text" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
+var XMLText = `<sms protocol="0" address="+15555555555" contact_name="Self" date="1493140602697" readable_date="Tue, 25 Apr 2017 13:16:42 EDT" type="1" subject="null" body="body XMLText" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />
 <sms protocol="0" address="22000" contact_name="null" date="1493139630014" readable_date="Tue, 25 Apr 2017 13:00:30 EDT" type="1" subject="null" body="Account notification: for u@abc.123" toa="null" sc_toa="null" service_center="null" read="1" status="-1" locked="0" />`
 
 func JsonDump(st interface{}) {
@@ -100,8 +101,8 @@ func TestSmsParseArray(t *testing.T) {
 	`
 	tail := `</smses>`
 
-	// signalstor.XMLParseArray([]byte(head+text+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
-	signalstor.XMLParse([]byte(head+text+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
+	// signalstor.XMLParseArray([]byte(head+XMLText+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
+	signalstor.XMLParse([]byte(head+XMLText+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
 
 	// for _, msg := range messages.Messages {
 	// 	fmt.Println(msg)
@@ -117,7 +118,7 @@ func TestSmsParseArray(t *testing.T) {
 	// 	fmt.Println(string(lhs))
 	// }
 
-	var wantedJSON = `{"sms":[{"contact_name":"Self","date":"1493140602697","readable_date":"Tue, 25 Apr 2017 13:16:42 EDT","address":"+15555555555","subject":"null","body":"body text","type":"1"},{"contact_name":"null","date":"1493139630014","readable_date":"Tue, 25 Apr 2017 13:00:30 EDT","address":"22000","subject":"null","body":"Account notification: for u@abc.123","type":"1"}]}`
+	var wantedJSON = `{"sms":[{"contact_name":"Self","date":"1493140602697","readable_date":"Tue, 25 Apr 2017 13:16:42 EDT","address":"+15555555555","subject":"null","body":"body XMLText","type":"1"},{"contact_name":"null","date":"1493139630014","readable_date":"Tue, 25 Apr 2017 13:00:30 EDT","address":"22000","subject":"null","body":"Account notification: for u@abc.123","type":"1"}]}`
 	// gotJSON := fmt.Sprintf("%s", string(lhs))
 	type Msg map[string][]map[string]string
 	var wanted Msg
@@ -146,7 +147,7 @@ func createMessages() signalstor.SmsMessages {
 `
 	tail := `</smses>`
 
-	signalstor.XMLParseArray([]byte(head+text+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
+	signalstor.XMLParseArray([]byte(head+XMLText+tail), &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
 
 	_, err := json.Marshal(messages)
 	if err != nil {
@@ -164,18 +165,25 @@ func TestSmsIO(t *testing.T) {
 		t.Fatalf("smsIO db object create is nil")
 	}
 
+	if smsIO.ConfigureDb() == nil {
+		t.Fatalf("smsIO configure failed")
+	}
+
 	smsRead := signalstor.NewSmsDbIO()
 	if smsRead == nil {
 		t.Fatalf("smsRead db object create is nil")
 	}
 
 	for _, x := range messages.Messages {
+		fmt.Printf("x %v\n", x)
+		fmt.Printf("key %v\n", string(key))
 		if err := smsIO.CopySmsMessage(&x).Encrypt(key); err != nil {
 			t.Fatalf("Encrypt() failed%v", err)
 		}
 		if err = smsIO.Delete(); err != nil {
 			t.Fatalf("smsIO.Delete() failed %v", err)
 		}
+		fmt.Printf("smsIO %v\n", *smsIO)
 		if err = smsIO.Create(); err != nil {
 			t.Fatalf("smsIO.Create() failed %v", err)
 		}

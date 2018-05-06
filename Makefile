@@ -14,7 +14,7 @@ all: $(patsubst examples/%.go,bin/%,$(files)) examples/version.go
 bin/%: examples/%.go $(package_files)
 	mkdir -p examples
 	echo $(VERSION_FLAG_INFO)
-	go build -tags netgo -ldflags "$(VERSION_FLAG_INFO)" -o $@ $< examples/version.go
+	vgo build -tags netgo -ldflags "$(VERSION_FLAG_INFO)" -o $@ $< examples/version.go
 
 .PHONY: test
 
@@ -22,4 +22,7 @@ test:
 	make -C test -f ../Makefile go-test
 
 go-test:
-	go test -v 
+	vgo test -v 
+
+install:
+	vgo install

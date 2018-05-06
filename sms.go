@@ -1,10 +1,11 @@
-package signalstor
+package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
 	"database/sql"
 
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/davidwalter0/go-mutex"
 	"github.com/davidwalter0/go-persist"
@@ -14,7 +15,7 @@ import (
 
 var smsDB = &persist.Database{}
 var standAlone = true
-var dropAll = false
+var dropAll = true
 var smsDbInitialized = false
 var monitor = mutex.NewMonitor()
 
@@ -41,8 +42,9 @@ func (sms *SmsDbIO) smsDbInitialize() {
 				smsDB.Connect()
 				if dropAll {
 					smsDB.DropAll(SmsDbIOSchema)
-					smsDB.Initialize(SmsDbIOSchema)
 				}
+				// idempotent operation
+				smsDB.Initialize(SmsDbIOSchema)
 			}
 		}
 	}
@@ -59,8 +61,8 @@ func smsDbInitialize() {
 				smsDB.Connect()
 				if dropAll {
 					smsDB.DropAll(SmsDbIOSchema)
-					smsDB.Initialize(SmsDbIOSchema)
 				}
+				smsDB.Initialize(SmsDbIOSchema)
 			}
 		}
 	}
@@ -176,6 +178,11 @@ func (sms *SmsDbIO) Create() (err error) {
 		panic("SmsDbIO.db not initialized")
 	}
 	smsDB := sms.db
+	if !sms.Msg.IsValid() || len(sms.Msg.Address) == 0 || len(sms.Msg.Timestamp) == 0 {
+		text := fmt.Sprintf("Error message parse error broken or empty fields %v", sms.Msg)
+		return fmt.Errorf(text)
+	}
+
 	// ignore DB & id
 	insert := fmt.Sprintf(`
 INSERT INTO sms 
@@ -197,10 +204,12 @@ VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', CURRENT_TIMESTAMP, CURRE
 		sms.Msg.Timestamp,
 		sms.Msg.Subject,
 		sms.Msg.ContactName,
-		sms.Msg.Body,
+		// sms.Msg.Body,
+		strings.Replace(sms.Msg.Body, "%", "%%", -1),
 		sms.Msg.Date,
 		sms.Msg.Type,
 	)
+	// fmt.Println(insert)
 	_, err = smsDB.Exec(insert)
 	return
 }
@@ -406,4 +415,15 @@ WHERE
 		publish <- &row.Msg
 	}
 	return err
+}
+
+// IsValid test for non empty records
+func (sms *SmsMessage) IsValid() bool {
+	return len(sms.Address) > 0 &&
+		len(sms.Timestamp) > 0 &&
+		len(sms.ContactName) > 0 &&
+		len(sms.Date) > 0 &&
+		len(sms.Subject) > 0 &&
+		len(sms.Body) > 0 &&
+		len(sms.Type) > 0
 }
