@@ -23,7 +23,7 @@ func init() {
 		"SQL_HOST":              "localhost",
 		"SQL_PORT":              "5432",
 		"SQL_DATABASE":          "sms",
-		"SQL_USER":              "USER_ID",
+		"SQL_USER":              "sms",
 		"SQL_PASSWORD":          "sms",
 		"SQL_TIMEOUT":           "0",
 		"SQL_SCHEMA_INITIALIZE": "false",

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/davidwalter0/go-cfg/flag"
+	"github.com/davidwalter0/go-flag"
 )
 
 var _unset = "set with -ldflags -X value"

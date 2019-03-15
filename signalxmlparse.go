@@ -100,7 +100,15 @@ func SmsXMLFixUp(xml string) (string, error) {
 	case "<?xml", "<smse", "</sms":
 		return "", nil
 	case "<sms ":
-		eol := "> </sms>"
+    var eol string
+		var eol1 = "> </sms>"
+    var eol2 = "></sms>"
+    if strings.Index(line, eol1) >=0 {
+      eol = eol1
+    }
+    if strings.Index(line, eol2) >=0 {
+      eol = eol2
+    }
 		endElem := "/>"
 		if strings.Index(line, eol) == -1 {
 			end := strings.Index(line, endElem)

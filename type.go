@@ -1,11 +1,25 @@
 package signalstor // 	"github.com/davidwalter0/go-signalstor"
 
 import (
+	"strings"
 	"fmt"
 	"time"
 
 	"github.com/davidwalter0/go-persist"
 )
+
+type Body string
+
+func (body *Body) Escape() (text string) {
+  if body == nil {
+    panic("body is nil")
+  }
+  text = string(*body)
+	text = strings.Replace(text, "'", "''", -1)
+  text = strings.Replace(text, "%", "%%", -1)
+  *body = Body(text)
+  return 
+}
 
 // SmsDbIO object db I/O for sms table
 type SmsDbIO struct {
@@ -24,7 +38,7 @@ type SmsMessage struct {
 	ContactName string `json:"contact_name"`
 	Date        string `json:"readable_date"`
 	Subject     string `json:"subject"`
-	Body        string `json:"body"`
+	Body        Body `json:"body"`
 	Type        string `json:"type" doc:"1 received, 2 sent"`
 }
 

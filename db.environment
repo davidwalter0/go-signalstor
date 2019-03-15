@@ -1,0 +1,87 @@
+#!/bin/bash -x
+
+Ok=0
+export FTP_FILENAME=${GOPATH}/go/src/github.com/davidwalter0/go-signalstor/signal-2018-05-23-14-38-25.backup.xml
+if [[ ! ${FTP_FILENAME:-} ]]; then
+    echo FTP_FILENAME is required to perform imports or tests
+fi
+if [[ ! -e ${FTP_FILENAME:-} ]]; then
+    echo FTP_FILENAME set to ${FTP_FILENAME} but is not found
+else
+    Ok=1
+fi
+
+if ((Ok)); then 
+    export FTP_HOST=192.168.0.12
+    export FTP_PORT=2121
+    export FTP_USER=ftp
+    export FTP_PASSWORD=vt3yev47ai
+    export FTP_PHONE="+13152786153"
+
+    export SQL_DRIVER=postgres
+    export WRAP_BUFFER_TRACE_ENABLE=true
+    if ! [[ ${SQL_DRIVER:-} ]]; then
+        echo Required SQL_DRIVER variable is unset
+        return 1
+    else
+        case ${SQL_DRIVER} in
+            pgsql|postgres)
+                export SQL_DRIVER=postgres
+                export SQL_PORT=5432
+                export SQL_HOST=localhost
+                ;;
+            mysql)
+                export SQL_DRIVER=mysql
+                export SQL_HOST=localhost
+                export SQL_PORT=3306
+                ;;
+        esac
+        export SQL_DATABASE=sms
+        export SQL_USER=sms
+        export SQL_PASSWORD=sms
+    fi
+    if true ; then
+        function create_db {
+
+            sudo -u postgres psql -U postgres -d postgres -f - <<EOF
+
+CREATE USER ${SQL_USER} WITH PASSWORD '${SQL_PASSWORD}'; 
+
+CREATE DATABASE ${SQL_DATABASE};
+
+\c ${SQL_DATABASE};
+
+GRANT ALL ON DATABASE ${SQL_DATABASE} TO ${LOGNAME};
+GRANT ALL ON DATABASE ${SQL_DATABASE} TO ${SQL_USER};
+
+GRANT ALL PRIVILEGES ON DATABASE ${SQL_DATABASE} to ${SQL_USER};
+GRANT ALL PRIVILEGES ON DATABASE ${SQL_DATABASE} to ${LOGNAME};
+
+GRANT ALL PRIVILEGES ON TABLE sms to sms;
+GRANT ALL PRIVILEGES ON TABLE sms to ${LOGNAME};
+
+EOF
+        }
+
+        cat <<EOF
+
+CREATE USER ${SQL_USER} WITH PASSWORD '${SQL_PASSWORD}'; 
+
+CREATE DATABASE ${SQL_DATABASE};
+
+\c ${SQL_DATABASE};
+
+GRANT ALL ON DATABASE ${SQL_DATABASE} TO ${LOGNAME};
+GRANT ALL ON DATABASE ${SQL_DATABASE} TO ${SQL_USER};
+
+GRANT ALL PRIVILEGES ON DATABASE ${SQL_DATABASE} to ${SQL_USER};
+GRANT ALL PRIVILEGES ON DATABASE ${SQL_DATABASE} to ${LOGNAME};
+
+GRANT ALL PRIVILEGES ON TABLE sms to sms;
+GRANT ALL PRIVILEGES ON TABLE sms to ${LOGNAME};
+
+EOF
+    fi
+    create_db
+fi
+

@@ -7,6 +7,12 @@ This is test software experimenting with:
 - load to database
 - client side encrypt before write to database
 
+*New*
+- Update to work with newer xml output format of golang
+  `github.com/xeals/signal-back` application
+- Update example db.environment script to test the environment setup,
+  assume that user has create db and user permissions via psql and the
+  user, password and db name are sms, update for your environment.
 
 The goal is to demonstrate transformation and secure backup of some
 source data using whisper systems signal xml backup format as an

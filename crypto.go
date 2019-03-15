@@ -150,10 +150,11 @@ func (sms *SmsDbIO) Encrypt(key []byte) (err error) {
 	if sms.Msg.Subject, err = Encrypt(key, sms.Msg.Subject); err != nil {
 		return
 	}
-	if sms.Msg.Body, err = Encrypt(key, sms.Msg.Body); err != nil {
+  var text string
+	if text, err = Encrypt(key, string(sms.Msg.Body)); err != nil {
 		return
 	}
-
+  sms.Msg.Body = Body(text)
 	// if sms.Msg.Type, err = Encrypt(key, sms.Msg.Type); err != nil {
 	// 	return err
 	// }
@@ -184,9 +185,11 @@ func (sms *SmsDbIO) Decrypt(key []byte) (err error) {
 	if sms.Msg.Subject, err = Decrypt(key, sms.Msg.Subject); err != nil {
 		return
 	}
-	if sms.Msg.Body, err = Decrypt(key, sms.Msg.Body); err != nil {
+  var text string
+	if text, err = Decrypt(key, string(sms.Msg.Body)); err != nil {
 		return
 	}
+  sms.Msg.Body = Body(text)
 	// if sms.Msg.Type, err = Decrypt(key, sms.Msg.Type); err != nil {
 	// 	return err
 	// }

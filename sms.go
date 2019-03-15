@@ -5,7 +5,6 @@ import (
 
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/davidwalter0/go-mutex"
 	"github.com/davidwalter0/go-persist"
@@ -204,12 +203,10 @@ VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', CURRENT_TIMESTAMP, CURRE
 		sms.Msg.Timestamp,
 		sms.Msg.Subject,
 		sms.Msg.ContactName,
-		// sms.Msg.Body,
-		strings.Replace(sms.Msg.Body, "%", "%%", -1),
+    sms.Msg.Body.Escape(),
 		sms.Msg.Date,
 		sms.Msg.Type,
 	)
-	// fmt.Println(insert)
 	_, err = smsDB.Exec(insert)
 	return
 }
@@ -296,7 +293,7 @@ AND
 		sms.Msg.Subject,
 		sms.Msg.ContactName,
 		sms.Msg.Date,
-		sms.Msg.Body,
+    sms.Msg.Body.Escape(),
 		sms.Msg.Type,
 		// where
 		sms.Msg.Address,
@@ -422,9 +419,9 @@ WHERE
 func (sms *SmsMessage) IsValid() bool {
 	return len(sms.Address) > 0 &&
 		len(sms.Timestamp) > 0 &&
-		len(sms.ContactName) > 0 &&
+		// len(sms.ContactName) > 0 &&
 		len(sms.Date) > 0 &&
-		len(sms.Subject) > 0 &&
-		len(sms.Body) > 0 &&
+		// len(sms.Subject) > 0 &&
+		// len(sms.Body) > 0 &&
 		len(sms.Type) > 0
 }

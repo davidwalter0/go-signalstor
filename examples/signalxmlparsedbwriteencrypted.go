@@ -26,8 +26,8 @@ func main() {
 		os.Exit(-1)
 	}
 
-	signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.SmsMessageValidate)
-	// signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
+	// signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.SmsMessageValidate)
+	signalstor.XMLParse(rawData, &messages, signalstor.SmsXMLFixUp, signalstor.NoOp)
 	smsDbIO := signalstor.NewSmsDbIO()
 
 	for _, msg := range messages.Messages {
@@ -44,6 +44,7 @@ func main() {
 
 		if err = smsDbIO.Create(); err != nil {
 			fmt.Println("*Error*", err)
+      panic(err)
 			continue
 		}
 
